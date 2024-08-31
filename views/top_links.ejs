@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Top Links Based on Interest</title>
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            padding-top: 20px;
+            padding-bottom: 20px;
+            background-color: #f8f9fa; /* Light background color */
+        }
+        .container {
+            max-width: 800px;
+        }
+        .headline-link {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            width: 100%;
+        }
+        .table-container {
+            overflow-x: auto;
+            text-align: center;
+        }
+        .header-bg {
+            background: linear-gradient(135deg, #6f42c1, #e83e8c); /* Gradient background */
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .header-bg h1 {
+            margin: 0;
+            font-size: 2.5rem; /* Larger font size for the header */
+        }
+        .btn-link {
+            font-size: 1rem; /* Font size for the link button */
+            color: #007bff; /* Bootstrap primary color */
+        }
+        .btn-link:hover {
+            color: #0056b3; /* Darker shade on hover */
+            text-decoration: underline;
+        }
+        .suggestion-tile {
+            display: inline-flex; /* Use flexbox for layout */
+            align-items: center; /* Center items vertically */
+            margin: 5px;
+            padding: 10px;
+            border: 1px solid #007bff;
+            border-radius: 5px;
+            background-color: #ffffff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            cursor: pointer;
+            position: relative; /* To position the tick icon */
+        }
+        .suggestion-tile:hover {
+            background-color: #e7f0ff;
+        }
+        .suggestion-tile .plus-icon {
+            font-size: 1.2rem;
+            color: #007bff;
+            transition: color 0.3s; /* Smooth transition for color change */
+        }
+        .suggestion-tile .tick-icon {
+            display: none;
+            font-size: 1.2rem;
+            color: #28a745; /* Green color for the tick icon */
+            margin-left: 10px; /* Space between text and tick icon */
+        }
+        .suggestion-tile.selected .plus-icon {
+            display: none;
+        }
+        .suggestion-tile.selected .tick-icon {
+            display: inline;
+        }
+        .error-message {
+            color: red;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header-bg">
+            <h1>Find Top Links Based on Interest</h1>
+        </div>
+        <form method="post" action="/top_links" class="mb-4 mt-4">
+            <div class="form-group">
+                <label for="website_url">Website URL:</label>
+                <input type="text" id="website_url" name="website_url" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label for="interest_keyword">Interest Keywords (comma-separated):</label>
+                <input type="text" id="interest_keyword" name="interest_keyword" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <div id="suggested_keywords">
+                    <% if (suggested_keywords && suggested_keywords.length > 0) { %>
+                        <% suggested_keywords.forEach(function(keyword) { %>
+                            <div class="suggestion-tile" data-keyword="<%= keyword %>">
+                                <span><%= keyword %></span>
+                                <span class="plus-icon">+</span>
+                                <span class="tick-icon">&#10003;</span> <!-- Tick icon -->
+                            </div>
+                        <% }); %>
+                    <% } %>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary">Get Top Links</button>
+        </form>
+
+        <% if (top_links && top_links.length > 0) { %>
+            <h2 class="text-center mb-4">Top 5 Links Based on Interest</h2>
+            <div class="table-container">
+                <table class="table table-striped mx-auto">
+                    <thead>
+                        <tr>
+                            <th>Headline</th>
+                            <th>Link</th>
+                            <th>Interest Score</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% top_links.forEach(function(link) { %>
+                            <tr>
+                                <td><%= link.Headline %></td>
+                                <td><a href="<%= link.Link %>" class="btn-link" target="_blank">View Article</a></td>
+                                <td><%= link['Interest Score'] %></td>
+                            </tr>
+                        <% }); %>
+                    </tbody>
+                </table>
+            </div>
+        <% } else { %>
+            <p class="text-center">No links found based on the provided keywords.</p>
+        <% } %>
+
+        <% if (error) { %>
+            <p class="error-message"><%= error %></p>
+        <% } %>
+    </div>
+    <!-- Bootstrap JS and dependencies -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const suggestedKeywordsDiv = document.getElementById('suggested_keywords');
+            const interestKeywordInput = document.getElementById('interest_keyword');
+
+            function updateTiles() {
+                const keywordsArray = interestKeywordInput.value.split(',').map(keyword => keyword.trim()).filter(keyword => keyword);
+                const tiles = suggestedKeywordsDiv.getElementsByClassName('suggestion-tile');
+                
+                Array.from(tiles).forEach(tile => {
+                    const keyword = tile.getAttribute('data-keyword');
+                    if (keywordsArray.includes(keyword)) {
+                        tile.classList.add('selected');
+                    } else {
+                        tile.classList.remove('selected');
+                    }
+                });
+            }
+
+            suggestedKeywordsDiv.addEventListener('click', function(event) {
+                const target = event.target.closest('.suggestion-tile');
+                if (target) {
+                    const keyword = target.getAttribute('data-keyword');
+                    const currentKeywords = interestKeywordInput.value;
+                    const keywordsArray = currentKeywords.split(',').map(keyword => keyword.trim()).filter(keyword => keyword);
+                    
+                    if (!keywordsArray.includes(keyword)) {
+                        keywordsArray.push(keyword);
+                        interestKeywordInput.value = keywordsArray.join(', ');
+                    } else {
+                        const index = keywordsArray.indexOf(keyword);
+                        if (index > -1) {
+                            keywordsArray.splice(index, 1);
+                            interestKeywordInput.value = keywordsArray.join(', ');
+                        }
+                    }
+                    
+                    // Update the tiles to reflect the current state
+                    updateTiles();
+                }
+            });
+
+            // Monitor changes in the input field
+            interestKeywordInput.addEventListener('input', updateTiles);
+        });
+    </script>
+</body>
+</html>
